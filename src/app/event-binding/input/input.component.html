@@ -1,0 +1,7 @@
+<h3>Input Component</h3>
+<input
+  type="text"
+  [value]="currentItem.name"
+  (input)="currentItem.name = getValue($event)"
+/>
+<button type="button" (click)="logInputValue()">Log Input Value</button>
