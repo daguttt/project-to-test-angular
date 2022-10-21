@@ -11,6 +11,13 @@ const routes: Routes = [
       ),
   },
   {
+    path: 'multiple-providers',
+    loadChildren: () =>
+      import('./multiple-providers/multiple-providers.module').then(
+        (m) => m.MultipleProvidersModule
+      ),
+  },
+  {
     path: '',
     component: HomePageComponent,
   },
