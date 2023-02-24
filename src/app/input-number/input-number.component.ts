@@ -1,3 +1,4 @@
+import { DecimalPipe } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { BehaviorSubject, Subscription, withLatestFrom } from 'rxjs';
@@ -6,6 +7,7 @@ import { BehaviorSubject, Subscription, withLatestFrom } from 'rxjs';
   selector: 'app-input-number',
   templateUrl: './input-number.component.html',
   styleUrls: ['./input-number.component.css'],
+  providers: [DecimalPipe],
 })
 export class InputNumberComponent implements OnInit, OnDestroy {
   inputNumber = new FormControl('');
@@ -17,7 +19,7 @@ export class InputNumberComponent implements OnInit, OnDestroy {
   });
   beforeInputData$ = this.beforeInputDataSubject.asObservable();
 
-  constructor() {}
+  constructor(private decimalPipe: DecimalPipe) {}
 
   ngOnInit(): void {
     this.inputNumber.valueChanges
@@ -37,18 +39,40 @@ export class InputNumberComponent implements OnInit, OnDestroy {
   }
 
   private preventNotNumericCharacters({
-    // 0: inputChange,
+    0: inputValue,
     1: { incomingChar, previousValue },
   }: [string | null, BeforeInputData]) {
+    if (!inputValue) return;
+
     const deletingCharacters = incomingChar === null;
     if (deletingCharacters) return;
 
-    const isIncomingCharValid = /[0-9]+/g.test(incomingChar);
-    if (isIncomingCharValid) return;
+    const isValidToAddDecimals =
+      inputValue.endsWith('.') || inputValue.endsWith('.0');
+    const hasOnePointDecimalChar = inputValue.split('.').length < 3; // `1234.234.` -> ❌
+    if (isValidToAddDecimals && hasOnePointDecimalChar) return;
+
+    const isIncomingCharValid = /[0-9\.]+/g.test(incomingChar);
+    if (isIncomingCharValid && hasOnePointDecimalChar) {
+      const parsedInputValue = parseFloat(inputValue.replace(/,+/g, ''));
+      const formattedInputValue = this.decimalPipe.transform(
+        parsedInputValue,
+        '1.0-2'
+      );
+
+      // console.log({ inputValue, parsedInputValue, formattedInputValue });
+      return this.inputNumber.setValue(formattedInputValue, {
+        emitEvent: false,
+      });
+    }
 
     this.inputNumber.setValue(previousValue, {
       emitEvent: false,
     });
+  }
+
+  private isNumberString(value: string) {
+    return /\d+/g.test(value);
   }
 }
 
