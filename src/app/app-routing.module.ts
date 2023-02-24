@@ -16,6 +16,13 @@ const routes: Routes = [
         (m) => m.MultipleProvidersModule
       ),
   },
+  {
+    path: 'input-number',
+    loadChildren: () =>
+      import('./input-number/input-number.module').then(
+        (m) => m.InputNumberModule
+      ),
+  },
 ];
 
 @NgModule({
