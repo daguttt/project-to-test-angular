@@ -70,10 +70,6 @@ export class InputNumberComponent implements OnInit, OnDestroy {
       emitEvent: false,
     });
   }
-
-  private isNumberString(value: string) {
-    return /\d+/g.test(value);
-  }
 }
 
 interface BeforeInputData {
