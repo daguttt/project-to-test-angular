@@ -1,0 +1,13 @@
+:host {
+  display: flex;
+}
+
+input {
+  font-size: 2rem;
+  border: none;
+  outline: transparent;
+}
+
+input::placeholder {
+  font-size: 1.5rem;
+}

@@ -1,78 +1,105 @@
-import { DecimalPipe } from '@angular/common';
+import { formatNumber } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { BehaviorSubject, Subscription, withLatestFrom } from 'rxjs';
+import { InputChangeMetadata } from './types/types';
 
 @Component({
   selector: 'app-input-number',
   templateUrl: './input-number.component.html',
   styleUrls: ['./input-number.component.css'],
-  providers: [DecimalPipe],
 })
 export class InputNumberComponent implements OnInit, OnDestroy {
   inputNumber = new FormControl('');
   sub!: Subscription;
 
-  private beforeInputDataSubject = new BehaviorSubject<BeforeInputData>({
-    previousValue: '',
-    incomingChar: '',
-  });
-  beforeInputData$ = this.beforeInputDataSubject.asObservable();
+  private inputChangeMetadataSubject = new BehaviorSubject<InputChangeMetadata>(
+    {
+      $input: null,
+      previousValue: null,
+      incomingChar: null,
+      oldCursorPosition: null,
+    }
+  );
+  inputChangeMetadata$ = this.inputChangeMetadataSubject.asObservable();
 
-  constructor(private decimalPipe: DecimalPipe) {}
+  constructor() {}
 
   ngOnInit(): void {
-    this.inputNumber.valueChanges
-      .pipe(withLatestFrom(this.beforeInputData$))
-      .subscribe((...args) => this.preventNotNumericCharacters(...args));
-  }
-
-  onBeforeInput(e: InputEvent) {
-    this.beforeInputDataSubject.next({
-      previousValue: this.inputNumber.value ?? '',
-      incomingChar: e.data,
-    });
+    this.sub = this.inputNumber.valueChanges
+      .pipe(withLatestFrom(this.inputChangeMetadata$))
+      .subscribe(([newInputValue, metadata]) =>
+        this.preventNotNumericCharacters(newInputValue, metadata)
+      );
   }
 
   ngOnDestroy(): void {
     this.sub.unsubscribe();
   }
 
-  private preventNotNumericCharacters({
-    0: inputValue,
-    1: { incomingChar, previousValue },
-  }: [string | null, BeforeInputData]) {
+  onBeforeInput(e: InputEvent, target: HTMLInputElement) {
+    // console.log({ event: e });
+    this.inputChangeMetadataSubject.next({
+      $input: target,
+      incomingChar: e.data,
+      oldCursorPosition: target.selectionStart,
+      previousValue: this.inputNumber.value,
+    });
+  }
+
+  private isAbleToAddDecimals(inputValue: string): boolean {
+    const hasNot3Decimals = /\.\d{3}/g.test(inputValue) === false;
+    const hasOnePointDecimalChar = inputValue.split('.').length < 3; // `1234.234.` -> ❌
+    // console.log({
+    //   hasOnePointDecimalChar,
+    //   hasNot3Decimals,
+    // });
+    return hasOnePointDecimalChar && hasNot3Decimals;
+  }
+
+  private formatInputValue(inputValue: string) {
+    const parsedInputValue = parseFloat(inputValue.replace(/,+/g, ''));
+    const formattedInputValue = formatNumber(parsedInputValue, 'en', '1.0-2');
+
+    // console.log({ inputValue, parsedInputValue, formattedInputValue });
+    this.inputNumber.setValue(formattedInputValue, {
+      emitEvent: false,
+    });
+  }
+
+  }
+
+  private preventNotNumericCharacters(
+    inputValue: string | null,
+    metadata: InputChangeMetadata
+  ) {
     if (!inputValue) return;
 
+    const { incomingChar, previousValue } = metadata;
+
+    // Validate incoming character
     const deletingCharacters = incomingChar === null;
-    if (deletingCharacters) return;
+    const isIncomingCharValid =
+      deletingCharacters || /[0-9\.]+/g.test(incomingChar ?? '');
 
-    const isValidToAddDecimals =
+    // Validate decimals
+    const isAbleToAddDecimals = this.isAbleToAddDecimals(inputValue);
+    const isAddingDecimals =
       inputValue.endsWith('.') || inputValue.endsWith('.0');
-    const hasOnePointDecimalChar = inputValue.split('.').length < 3; // `1234.234.` -> ❌
-    if (isValidToAddDecimals && hasOnePointDecimalChar) return;
+    if (isAbleToAddDecimals && isAddingDecimals) return;
 
-    const isIncomingCharValid = /[0-9\.]+/g.test(incomingChar);
-    if (isIncomingCharValid && hasOnePointDecimalChar) {
-      const parsedInputValue = parseFloat(inputValue.replace(/,+/g, ''));
-      const formattedInputValue = this.decimalPipe.transform(
-        parsedInputValue,
-        '1.0-2'
-      );
+    // console.log({
+    //   isIncomingCharValid: isIncomingCharValid,
+    //   isAbleToAddDecimals,
+    // });
 
-      // console.log({ inputValue, parsedInputValue, formattedInputValue });
-      return this.inputNumber.setValue(formattedInputValue, {
+    if (!isIncomingCharValid || !isAbleToAddDecimals) {
+      return this.inputNumber.setValue(previousValue, {
         emitEvent: false,
       });
     }
 
-    this.inputNumber.setValue(previousValue, {
-      emitEvent: false,
-    });
+    this.formatInputValue(inputValue);
   }
 }
-
-interface BeforeInputData {
-  previousValue: string;
-  incomingChar: string | null;
 }
