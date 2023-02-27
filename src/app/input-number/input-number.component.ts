@@ -79,6 +79,10 @@ export class InputNumberComponent implements OnInit, OnDestroy {
     )
       return;
 
+    // Reset cursor position
+    $input.selectionStart = $input.value.length;
+    $input.selectionEnd = $input.value.length;
+
     // Deleting the comma (`,`) character
     let offsetForCommaChar = 0;
     const previousCharacterOnPreviousValue = previousValue.substring(
@@ -102,6 +106,17 @@ export class InputNumberComponent implements OnInit, OnDestroy {
 
     if (isInvalidNewCursorPosition) reverseCursorPosition -= 1;
     if (previousValue.length === 3 && reverseCursorPosition === 1) return; // ❗ Edge case
+
+    // console.table({
+    //   isInvalidNewCursorPosition,
+    //   previousInputValueLength: previousValue.length,
+    //   currentInputValueLength: $input.value.length,
+    //   offsetForCommaChar,
+    //   oldCursorPosition,
+    //   currentCursorPosition: $input.selectionStart,
+    //   reverseCursorPosition,
+    //   newCursorPosition: $input.selectionStart - reverseCursorPosition,
+    // });
 
     $input.selectionStart -= reverseCursorPosition;
     $input.selectionEnd -= reverseCursorPosition;
