@@ -105,7 +105,6 @@ export class InputNumberComponent implements OnInit, OnDestroy {
       $input.selectionStart - reverseCursorPosition === -1;
 
     if (isInvalidNewCursorPosition) reverseCursorPosition -= 1;
-    if (previousValue.length === 3 && reverseCursorPosition === 1) return; // ❗ Edge case
 
     // console.table({
     //   isInvalidNewCursorPosition,
