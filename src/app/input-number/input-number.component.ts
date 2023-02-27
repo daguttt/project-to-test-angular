@@ -67,6 +67,44 @@ export class InputNumberComponent implements OnInit, OnDestroy {
     });
   }
 
+  private updateCursorPosition(inputChangeMetadata: InputChangeMetadata) {
+    const { $input, oldCursorPosition, previousValue } = inputChangeMetadata;
+
+    if (
+      !$input ||
+      !$input?.selectionStart ||
+      !$input?.selectionEnd ||
+      !previousValue ||
+      !oldCursorPosition
+    )
+      return;
+
+    // Deleting the comma (`,`) character
+    let offsetForCommaChar = 0;
+    const previousCharacterOnPreviousValue = previousValue.substring(
+      oldCursorPosition - 1,
+      oldCursorPosition
+    );
+    if (previousCharacterOnPreviousValue === ',') offsetForCommaChar = 1;
+
+    let reverseCursorPosition: number =
+      previousValue.length - (oldCursorPosition - offsetForCommaChar);
+
+    /**
+     * If not enough reverse positions.
+     * Example:
+     * ( '|' => Cursor position)
+     *
+     * `"2|,342 -> 342"`
+     */
+    const isInvalidNewCursorPosition: boolean =
+      $input.selectionStart - reverseCursorPosition === -1;
+
+    if (isInvalidNewCursorPosition) reverseCursorPosition -= 1;
+    if (previousValue.length === 3 && reverseCursorPosition === 1) return; // ❗ Edge case
+
+    $input.selectionStart -= reverseCursorPosition;
+    $input.selectionEnd -= reverseCursorPosition;
   }
 
   private preventNotNumericCharacters(
@@ -100,6 +138,6 @@ export class InputNumberComponent implements OnInit, OnDestroy {
     }
 
     this.formatInputValue(inputValue);
+    if (deletingCharacters) this.updateCursorPosition(metadata);
   }
-}
 }
