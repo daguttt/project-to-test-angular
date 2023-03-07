@@ -1,9 +1,15 @@
 import { formatNumber } from '@angular/common';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit } from '@angular/core';
 import { FormControl } from '@angular/forms';
-import { BehaviorSubject, Subscription, tap, withLatestFrom } from 'rxjs';
+import { BehaviorSubject, map, Subscription, withLatestFrom } from 'rxjs';
 
-import { InputChangeMetadata, InputType } from './types/types';
+import {
+  InputChangeMetadata,
+  InputType,
+  InputTypeMap,
+  ValidInputValue,
+} from './types/types';
+
 import { UpdateCursorPositionStrategy } from './update-cursor-position-strategies/interface/update-cursor-position-strategy.interface';
 import { DefaultStrategy } from './update-cursor-position-strategies/default.strategy';
 import { DeleteContentForwardStrategy } from './update-cursor-position-strategies/delete-content-forward.strategy';
@@ -14,9 +20,12 @@ import { DeleteContentForwardStrategy } from './update-cursor-position-strategie
   styleUrls: ['./input-number.component.css'],
 })
 export class InputNumberComponent implements OnInit, OnDestroy {
+  @Input() format: boolean = true;
+
   inputNumber = new FormControl('');
   // inputNumber = new FormControl('1,234');
   sub!: Subscription;
+  strategy: UpdateCursorPositionStrategy = new DefaultStrategy();
 
   private inputChangeMetadataSubject = new BehaviorSubject<InputChangeMetadata>(
     {
@@ -29,18 +38,20 @@ export class InputNumberComponent implements OnInit, OnDestroy {
   );
   inputChangeMetadata$ = this.inputChangeMetadataSubject.asObservable();
 
-  strategy: UpdateCursorPositionStrategy = new DefaultStrategy();
   constructor() {}
 
   ngOnInit(): void {
     this.sub = this.inputNumber.valueChanges
       .pipe(
         withLatestFrom(this.inputChangeMetadata$),
-        tap(([newInputValue, metadata]) =>
-          this.preventNotNumericCharacters(newInputValue, metadata)
+        map(([newInputValue, metadata]) =>
+          this.preventInvalidCharacters(newInputValue, metadata)
         )
       )
-      .subscribe(([, metadata]) => this.updateCursorPosition(metadata));
+      .subscribe(
+        ({ value: validInputValue, metadata }) =>
+          this.format && this.formatInputValue(validInputValue, metadata)
+      );
   }
 
   ngOnDestroy(): void {
@@ -58,61 +69,59 @@ export class InputNumberComponent implements OnInit, OnDestroy {
     });
   }
 
-  private isAbleToAddDecimals(inputValue: string): boolean {
-    const hasNot3Decimals = /\.\d{3}/g.test(inputValue) === false;
-    const hasOnePointDecimalChar = inputValue.split('.').length < 3; // `1234.234.` -> ❌
-    // console.log({
-    //   hasOnePointDecimalChar,
-    //   hasNot3Decimals,
-    // });
-    return hasOnePointDecimalChar && hasNot3Decimals;
-  }
-
-  private formatInputValue(inputValue: string) {
-    const parsedInputValue = parseFloat(inputValue.replace(/,+/g, ''));
-    const formattedInputValue = formatNumber(parsedInputValue, 'en', '1.0-2');
-
-    // console.log({ inputValue, parsedInputValue, formattedInputValue });
-    this.inputNumber.setValue(formattedInputValue, {
-      emitEvent: false,
-    });
-  }
-
-  private updateCursorPosition(inputChangeMetadata: InputChangeMetadata) {
-    // console.log('hello');
-    const { inputType } = inputChangeMetadata;
-    const strategiesMap: { [key: string]: UpdateCursorPositionStrategy } = {
-      deleteContentForward: new DeleteContentForwardStrategy(),
-    };
-    this.strategy =
-      strategiesMap[inputType ?? 'insertText'] ?? new DefaultStrategy();
-    // console.log({ strategy: this.strategy });
-    return this.strategy.updateCursorPosition(inputChangeMetadata);
-  }
-
-  private preventNotNumericCharacters(
+  private formatInputValue(
     inputValue: string | null,
     metadata: InputChangeMetadata
   ) {
-    if (!inputValue) return;
+    if (!inputValue || inputValue.endsWith('.')) return;
+
+    const parsedInputValue = parseFloat(inputValue.replace(/,+/g, ''));
+    const formattedInputValue = formatNumber(parsedInputValue, 'en', '1.0-2');
+
+    this.inputNumber.setValue(formattedInputValue, {
+      emitEvent: false,
+    });
+    this.updateCursorPosition(metadata);
+  }
+
+  private updateCursorPosition(inputChangeMetadata: InputChangeMetadata) {
+    const { inputType } = inputChangeMetadata;
+    if (!inputType) return;
+
+    const strategiesMap: InputTypeMap = {
+      deleteContentForward: new DeleteContentForwardStrategy(),
+      deleteContentBackward: new DefaultStrategy(),
+      insertText: new DefaultStrategy(),
+    };
+    this.strategy = strategiesMap[inputType];
+
+    return this.strategy.updateCursorPosition(inputChangeMetadata);
+  }
+
+  private preventInvalidCharacters(
+    inputValue: string | null,
+    metadata: InputChangeMetadata
+  ): ValidInputValue {
+    if (!inputValue) return { value: inputValue, metadata };
 
     const { incomingChar, previousValue } = metadata;
 
-    // Validate incoming character
-    const isIncomingCharValid =
-      incomingChar === null || /[0-9\.]+/g.test(incomingChar);
+    if (incomingChar === null) return { value: inputValue, metadata };
 
-    // Validate decimals
-    const isAbleToAddDecimals = this.isAbleToAddDecimals(inputValue);
-    const isAddingDecimals =
-      inputValue.endsWith('.') || inputValue.endsWith('.0');
-    if (isAbleToAddDecimals && isAddingDecimals) return;
+    const isIncomingCharInvalid = /[0-9\.]+/g.test(incomingChar) === false;
+    const isIncomingCharNumber = /[0-9]+/.test(inputValue);
+    const has3Decimal = /\.\d{3}/g.test(inputValue);
+    const isNotAbleToAddPoint = inputValue.split('.').length > 2; // `1234.234.` -> ❌
 
-    if (!isIncomingCharValid || !isAbleToAddDecimals) {
-      return this.inputNumber.setValue(previousValue, {
-        emitEvent: false,
-      });
+    const isInvalid =
+      isIncomingCharInvalid ||
+      (isIncomingCharNumber && has3Decimal) ||
+      isNotAbleToAddPoint;
+
+    if (isInvalid) {
+      this.inputNumber.setValue(previousValue, { emitEvent: false });
+      return { value: previousValue, metadata };
     }
-    this.formatInputValue(inputValue);
+    return { value: inputValue, metadata };
   }
 }

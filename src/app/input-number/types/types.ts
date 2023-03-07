@@ -1,3 +1,5 @@
+import { UpdateCursorPositionStrategy } from '../update-cursor-position-strategies/interface/update-cursor-position-strategy.interface';
+
 export interface InputChangeMetadata {
   incomingChar: string | null;
   inputType: InputType | null;
@@ -14,3 +16,11 @@ export const INPUT_TYPES = {
 
 export type ObjectValues<T> = T[keyof T];
 export type InputType = ObjectValues<typeof INPUT_TYPES>;
+export type InputTypeMap = {
+  [Key in InputType]: UpdateCursorPositionStrategy;
+};
+
+export type ValidInputValue = {
+  value: string | null;
+  metadata: InputChangeMetadata;
+};
