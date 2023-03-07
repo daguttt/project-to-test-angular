@@ -22,5 +22,5 @@ export type InputTypeMap = {
 
 export type ValidInputValue = {
   value: string | null;
-  metadata: InputChangeMetadata;
+  metadata: InputChangeMetadata | null;
 };

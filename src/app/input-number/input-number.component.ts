@@ -27,15 +27,8 @@ export class InputNumberComponent implements OnInit, OnDestroy {
   sub!: Subscription;
   strategy: UpdateCursorPositionStrategy = new DefaultStrategy();
 
-  private inputChangeMetadataSubject = new BehaviorSubject<InputChangeMetadata>(
-    {
-      $input: null,
-      previousValue: null,
-      inputType: null,
-      incomingChar: null,
-      oldCursorPosition: null,
-    }
-  );
+  private inputChangeMetadataSubject =
+    new BehaviorSubject<InputChangeMetadata | null>(null);
   inputChangeMetadata$ = this.inputChangeMetadataSubject.asObservable();
 
   constructor() {}
@@ -71,7 +64,7 @@ export class InputNumberComponent implements OnInit, OnDestroy {
 
   private formatInputValue(
     inputValue: string | null,
-    metadata: InputChangeMetadata
+    metadata: InputChangeMetadata | null
   ) {
     if (!inputValue || inputValue.endsWith('.')) return;
 
@@ -84,7 +77,11 @@ export class InputNumberComponent implements OnInit, OnDestroy {
     this.updateCursorPosition(metadata);
   }
 
-  private updateCursorPosition(inputChangeMetadata: InputChangeMetadata) {
+  private updateCursorPosition(
+    inputChangeMetadata: InputChangeMetadata | null
+  ) {
+    if (!inputChangeMetadata) return;
+
     const { inputType } = inputChangeMetadata;
     if (!inputType) return;
 
@@ -100,9 +97,9 @@ export class InputNumberComponent implements OnInit, OnDestroy {
 
   private preventInvalidCharacters(
     inputValue: string | null,
-    metadata: InputChangeMetadata
+    metadata: InputChangeMetadata | null
   ): ValidInputValue {
-    if (!inputValue) return { value: inputValue, metadata };
+    if (!inputValue || !metadata) return { value: inputValue, metadata };
 
     const { incomingChar, previousValue } = metadata;
 
