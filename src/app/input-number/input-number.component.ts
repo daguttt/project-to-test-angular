@@ -35,7 +35,7 @@ export class InputNumberComponent {
   constructor() {}
 
   preventInvalidCharacters(e: KeyboardEvent, $input: HTMLInputElement) {
-    const inputValue = $input.value;
+    const inputValue = this.inputNumber.value;
     if (inputValue === null) return;
 
     this.previousInputState = {
@@ -70,7 +70,7 @@ export class InputNumberComponent {
     $input: HTMLInputElement,
     previousInputState: PreviousInputState | null
   ) {
-    const inputValue = $input.value;
+    const inputValue = this.inputNumber.value;
 
     const notNeedToFormat =
       !inputValue || inputValue.endsWith('.') || inputValue.endsWith('.0');
