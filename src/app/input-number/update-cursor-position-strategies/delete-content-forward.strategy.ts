@@ -1,19 +1,15 @@
-import { InputChangeMetadata } from '../types/types';
+import { PreviousInputState } from '../types/types';
 import { UpdateCursorPositionStrategy } from './interface/update-cursor-position-strategy.interface';
+
+export const FORWARD_STRATEGY_KEY = 'Delete';
 
 export class DeleteContentForwardStrategy
   implements UpdateCursorPositionStrategy
 {
-  updateCursorPosition(inputChangeMetadata: InputChangeMetadata): void {
-    const { $input, oldCursorPosition, previousValue } = inputChangeMetadata;
-
-    // console.log({
-    //   $input,
-    //   selectionStart: $input?.selectionStart,
-    //   selectionEnd: $input?.selectionEnd,
-    //   previousValue,
-    //   oldCursorPosition,
-    // });
+  updateCursorPosition(
+    $input: HTMLInputElement,
+    { previousValue, oldCursorPosition }: PreviousInputState
+  ): void {
     if (
       !$input ||
       !$input?.selectionStart ||

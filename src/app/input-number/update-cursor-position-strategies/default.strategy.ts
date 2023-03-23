@@ -1,10 +1,11 @@
-import { InputChangeMetadata } from '../types/types';
+import { PreviousInputState } from '../types/types';
 import { UpdateCursorPositionStrategy } from './interface/update-cursor-position-strategy.interface';
 
 export class DefaultStrategy implements UpdateCursorPositionStrategy {
-  updateCursorPosition(inputChangeMetadata: InputChangeMetadata): void {
-    const { $input, oldCursorPosition, previousValue } = inputChangeMetadata;
-
+  updateCursorPosition(
+    $input: HTMLInputElement,
+    { oldCursorPosition, previousValue }: PreviousInputState
+  ): void {
     if (
       !$input ||
       !$input?.selectionStart ||

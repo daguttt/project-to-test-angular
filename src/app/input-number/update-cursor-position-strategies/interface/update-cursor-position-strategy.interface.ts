@@ -1,5 +1,8 @@
-import { InputChangeMetadata } from '../../types/types';
+import { PreviousInputState } from '../../types/types';
 
 export interface UpdateCursorPositionStrategy {
-  updateCursorPosition(inputChangeMetadata: InputChangeMetadata): void;
+  updateCursorPosition(
+    $input: HTMLInputElement,
+    previousInputState: PreviousInputState | null
+  ): void;
 }

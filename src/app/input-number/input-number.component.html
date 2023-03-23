@@ -1,8 +1,9 @@
 <input
   type="text"
   #target
-  (beforeinput)="onBeforeInput($event, target)"
   [formControl]="inputNumber"
+  (keydown)="preventInvalidCharacters($event, target)"
+  (input)="onInput(target)"
   placeholder="Toca para agregar el monto"
   inputmode="numeric"
 />
